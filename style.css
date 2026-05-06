@@ -1,14 +1,11 @@
 body, html {
     margin: 0;
     padding: 0;
-    /* 100vh is a backup for very old computers */
     height: 100vh; 
-    /* 100dvh fixes the mobile phone centering bug! */
     height: 100dvh; 
     width: 100vw;
     background-color: white;
     
-    /* Flexbox is what centers the image dead in the middle */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -16,8 +13,10 @@ body, html {
     overflow: hidden;
     cursor: pointer;
     
-    /* This stops mobile phones from flashing a blue square when you tap */
     -webkit-tap-highlight-color: transparent; 
+    
+    /* THIS IS THE NEW LINE: Tells touchscreen to act instantly */
+    touch-action: none; 
 }
 
 img {
