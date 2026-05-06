@@ -1,18 +1,35 @@
 body, html {
     margin: 0;
-    height: 100vh;
-    background-color: white; /* Changed to white */
+    padding: 0;
+    /* 100vh is a backup for very old computers */
+    height: 100vh; 
+    /* 100dvh fixes the mobile phone centering bug! */
+    height: 100dvh; 
+    width: 100vw;
+    background-color: white;
+    
+    /* Flexbox is what centers the image dead in the middle */
     display: flex;
     justify-content: center;
     align-items: center;
+    
     overflow: hidden;
     cursor: pointer;
+    
+    /* This stops mobile phones from flashing a blue square when you tap */
+    -webkit-tap-highlight-color: transparent; 
 }
 
 img {
-    max-width: 70vw; /* Keeps the image smaller than the screen width */
-    max-height: 70vh; /* Keeps the image smaller than the screen height */
-    object-fit: contain; /* Makes sure the image never gets stretched out of shape */
+    /* Made it slightly bigger (85 instead of 70) so it looks great on narrow phone screens */
+    max-width: 85vw; 
+    max-height: 85dvh; 
+    object-fit: contain; 
+    
+    /* Stops people from accidentally dragging or highlighting the image */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
 }
 
 #authorText {
@@ -21,6 +38,7 @@ img {
     left: 20px;
     color: black;
     font-size: 20px;
-    pointer-events: none; /* This ensures if you click the text, it still clicks the screen to change the image */
-    user-select: none; /* Stops you from accidentally highlighting the text */
+    pointer-events: none; 
+    user-select: none; 
+    margin: 0;
 }
