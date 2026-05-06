@@ -1,23 +1,18 @@
-// 1. Your images
-const allImages = [
-    'images/1.jpg',
-    'images/2.jpg',
-    'images/3.jpg',
-    'images/4.jpg',
-    'images/5.jpg',
-    'images/1.png',
-'images/2.png',
-'images/3.png',
-'images/4.png',
-'images/5.png',
-'images/6.png',
-'images/7.png',
-'images/8.png',
-'images/9.png',
-'images/10.png',
-'images/11.png',
-'images/12.png'
-];
+// --- JUST CHANGE THESE TWO SETTINGS ---
+const totalNumberOfImages = 10;  // Put your total number of images here!
+const imageExtension = '.jpg';   
+// --------------------------------------
+
+// 1. Let the computer build the image list AND preload them instantly
+const allImages = [];
+for (let i = 1; i <= totalNumberOfImages; i++) {
+    const imagePath = 'images/' + i + imageExtension;
+    allImages.push(imagePath);
+    
+    // PRELOAD TRICK: This silently downloads the image in the background
+    const preload = new Image();
+    preload.src = imagePath;
+}
 
 // 2. The 64 Fonts List
 const allFonts = [
@@ -53,8 +48,8 @@ function showRandomImage() {
     const randomImageIndex = Math.floor(Math.random() * availableImages.length);
     const selectedImage = availableImages.splice(randomImageIndex, 1)[0];
     
+    // Because of our preload trick above, this will now happen instantly!
     imgElement.src = selectedImage;
-
 
     // --- FONT LOGIC (Never repeats until empty) ---
     if (availableFonts.length === 0) {
