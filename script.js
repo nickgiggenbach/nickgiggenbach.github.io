@@ -1,6 +1,6 @@
 // --- JUST CHANGE THESE TWO SETTINGS ---
-const totalNumberOfImages = 10;  // Put your total number of images here!
-const imageExtension = '.jpg';   
+const totalNumberOfImages = 17;  // Put your total number of images here!
+const imageExtension = '.jpg', '.png',;   
 // --------------------------------------
 
 // 1. Let the computer build the image list AND preload them instantly
