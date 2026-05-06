@@ -1,7 +1,7 @@
 // --- JUST CHANGE THIS ONE SETTING ---
 // Put the highest number image you have here. 
 // It's okay if you guess a little high (e.g. putting 50 when you only have 42).
-const maxImageNumber = 20;  
+const maxImageNumber = 40;  
 // ------------------------------------
 
 const extensionsToTry = ['.jpg', '.png', '.JPG', '.PNG', '.jpeg', '.webp'];
