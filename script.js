@@ -96,4 +96,10 @@ function showRandomImage() {
 }
 
 // Make the screen clickable
-window.addEventListener('click', showRandomImage);
+// CHANGE 'click' TO 'pointerdown'
+window.addEventListener('pointerdown', showRandomImage);
+
+// Run once right away when the page loads
+showRandomImage();
+
+
