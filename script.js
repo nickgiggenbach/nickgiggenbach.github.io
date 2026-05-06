@@ -1,20 +1,15 @@
-// --- JUST CHANGE THESE TWO SETTINGS ---
-const totalNumberOfImages = 17;  // Put your total number of images here!
-const imageExtension = '.jpg', '.png',;   
-// --------------------------------------
+// --- JUST CHANGE THIS ONE SETTING ---
+// Put the highest number image you have here. 
+// It's okay if you guess a little high (e.g. putting 50 when you only have 42).
+const maxImageNumber = 20;  
+// ------------------------------------
 
-// 1. Let the computer build the image list AND preload them instantly
+const extensionsToTry = ['.jpg', '.png', '.JPG', '.PNG', '.jpeg', '.webp'];
+
 const allImages = [];
-for (let i = 1; i <= totalNumberOfImages; i++) {
-    const imagePath = 'images/' + i + imageExtension;
-    allImages.push(imagePath);
-    
-    // PRELOAD TRICK: This silently downloads the image in the background
-    const preload = new Image();
-    preload.src = imagePath;
-}
+let availableImages = [];
 
-// 2. The 64 Fonts List
+// The 64 Fonts List
 const allFonts = [
     'Arial', '"Arial Black"', '"Arial Narrow"', 'Helvetica', 'sans-serif',
     '"Times New Roman"', 'Times', 'serif', 'Georgia', 'Palatino',
@@ -32,38 +27,73 @@ const allFonts = [
     'Zapfino', 'Sylfaen', '"Bodoni MT"', 'system-ui'
 ];
 
-// 3. Make copies of the lists that we will pull from
-let availableImages = [...allImages];
 let availableFonts = [...allFonts];
 
 const imgElement = document.getElementById('displayImage');
 const textElement = document.getElementById('authorText');
 
+let firstImageShown = false;
+
+// 1. THE DETECTIVE PRELOADER
+// This checks every number and guesses the extension until it finds your file
+for (let i = 1; i <= maxImageNumber; i++) {
+    findAndPreloadImage(i, 0);
+}
+
+function findAndPreloadImage(imageNumber, extIndex) {
+    // If we tried every extension and none worked, stop checking this number
+    if (extIndex >= extensionsToTry.length) return; 
+
+    const testPath = 'images/' + imageNumber + extensionsToTry[extIndex];
+    const tester = new Image();
+    
+    // If it successfully finds the image:
+    tester.onload = function() {
+        allImages.push(testPath);
+        availableImages.push(testPath);
+        
+        // If this is the very first image it found, show it on screen immediately!
+        if (!firstImageShown) {
+            firstImageShown = true;
+            showRandomImage();
+        }
+    };
+    
+    // If it fails (e.g. 1.jpg doesn't exist):
+    tester.onerror = function() {
+        // Try again with the next extension in the list (e.g. 1.png)
+        findAndPreloadImage(imageNumber, extIndex + 1);
+    };
+    
+    // This line tells the detective to actually test the path
+    tester.src = testPath; 
+}
+
+
+// 2. THE DISPLAY LOGIC
 function showRandomImage() {
     
-    // --- IMAGE LOGIC (Never repeats until empty) ---
+    // If no images have finished loading yet, do nothing.
+    if (allImages.length === 0) return;
+    
+    // --- IMAGE LOGIC ---
     if (availableImages.length === 0) {
         availableImages = [...allImages]; 
     }
     const randomImageIndex = Math.floor(Math.random() * availableImages.length);
     const selectedImage = availableImages.splice(randomImageIndex, 1)[0];
     
-    // Because of our preload trick above, this will now happen instantly!
     imgElement.src = selectedImage;
 
-    // --- FONT LOGIC (Never repeats until empty) ---
+    // --- FONT LOGIC ---
     if (availableFonts.length === 0) {
         availableFonts = [...allFonts]; 
     }
     const randomFontIndex = Math.floor(Math.random() * availableFonts.length);
     const selectedFont = availableFonts.splice(randomFontIndex, 1)[0];
     
-    // Apply the random font to your name
     textElement.style.fontFamily = selectedFont;
 }
 
 // Make the screen clickable
 window.addEventListener('click', showRandomImage);
-
-// Run once right away when the page loads
-showRandomImage();
