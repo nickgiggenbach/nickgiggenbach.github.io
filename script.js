@@ -1,5 +1,5 @@
 // --- JUST CHANGE THIS ONE SETTING ---
-const maxImageNumber = 90;  
+const maxImageNumber = 20;  // Change this to your highest numbered image
 // ------------------------------------
 
 const extensionsToTry = ['.jpg', '.png', '.JPG', '.PNG', '.jpeg', '.webp'];
@@ -29,9 +29,13 @@ let availableFonts = [...allFonts];
 const imgElement = document.getElementById('displayImage');
 const textElement = document.getElementById('authorText');
 
+// Setup for smooth zooming
+let currentZoom = 1;
+imgElement.style.transition = 'transform 0.15s ease-out, opacity 0s';
+
 let firstImageShown = false;
 
-// THE DETECTIVE PRELOADER
+// --- THE DETECTIVE PRELOADER ---
 for (let i = 1; i <= maxImageNumber; i++) {
     findAndPreloadImage(i, 0);
 }
@@ -60,9 +64,9 @@ function findAndPreloadImage(imageNumber, extIndex) {
 }
 
 
-// SHOW THE IMAGE ONCE IT IS LOADED (Prevents glitching)
+// --- RESOLUTION PROTECTION ---
+// Shows the image once loaded, and enforces the 80% natural size rule
 imgElement.onload = function() {
-    
     // Calculate 80% of the image's true file resolution
     const shrinkWidth = imgElement.naturalWidth * 0.8;
     const shrinkHeight = imgElement.naturalHeight * 0.8;
@@ -72,16 +76,21 @@ imgElement.onload = function() {
     imgElement.style.maxWidth = `min(${shrinkWidth}px, 85vw)`;
     imgElement.style.maxHeight = `min(${shrinkHeight}px, 80dvh)`;
     
+    // Reveal the image
     imgElement.style.opacity = '1';
 };
 
 
-// THE DISPLAY LOGIC
+// --- THE DISPLAY LOGIC ---
 function showRandomImage() {
     if (allImages.length === 0) return;
     
     // Hide the image instantly while we swap it
     imgElement.style.opacity = '0';
+    
+    // Reset zoom when a new image loads
+    currentZoom = 1;
+    imgElement.style.transform = `scale(1)`;
     
     // --- FONT LOGIC ---
     if (availableFonts.length === 0) {
@@ -100,5 +109,30 @@ function showRandomImage() {
     imgElement.src = availableImages.splice(randomImageIndex, 1)[0];
 }
 
-// Instant Mobile Tapping
+
+// --- EVENT LISTENERS ---
+
+// 1. Instant Mobile Tapping & Mouse Clicking
 window.addEventListener('pointerdown', showRandomImage);
+
+// 2. Scroll Wheel Zoom Engine
+window.addEventListener('wheel', function(event) {
+    // Stops the entire webpage from accidentally scrolling
+    event.preventDefault(); 
+
+    // Scroll up = Zoom in. Scroll down = Zoom out.
+    if (event.deltaY < 0) {
+        currentZoom += 0.15; // Speed of zooming in
+    } else {
+        currentZoom -= 0.15; // Speed of zooming out
+    }
+
+    // Lock the zoom limits! 
+    // 1 = Cannot zoom out further than standard size
+    // 6 = Cannot zoom in more than 6x magnification
+    currentZoom = Math.min(Math.max(1, currentZoom), 6);
+
+    // Apply the zoom size to the image
+    imgElement.style.transform = `scale(${currentZoom})`;
+    
+}, { passive: false });
