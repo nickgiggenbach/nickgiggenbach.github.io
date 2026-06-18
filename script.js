@@ -28,7 +28,6 @@ let availableFonts = [...allFonts];
 
 const imgElement = document.getElementById('displayImage');
 const textElement = document.getElementById('authorText');
-const wrapperElement = document.getElementById('imageWrapper'); // Grab the wrapper!
 
 let firstImageShown = false;
 
@@ -70,38 +69,67 @@ function showRandomImage() {
         availableImages = [...allImages]; 
     }
     const randomImageIndex = Math.floor(Math.random() * availableImages.length);
-    const selectedImage = availableImages.splice(randomImageIndex, 1)[0];
-    
-    imgElement.src = selectedImage;
+    imgElement.src = availableImages.splice(randomImageIndex, 1)[0];
 
     // --- FONT LOGIC ---
     if (availableFonts.length === 0) {
         availableFonts = [...allFonts]; 
     }
     const randomFontIndex = Math.floor(Math.random() * availableFonts.length);
-    const selectedFont = availableFonts.splice(randomFontIndex, 1)[0];
+    textElement.style.fontFamily = availableFonts.splice(randomFontIndex, 1)[0];
+
+    // --- COLLISION ENGINE & POSITIONING ---
+    // Grab the mathematical box of where the text is sitting right now
+    const textRect = textElement.getBoundingClientRect();
     
-    textElement.style.fontFamily = selectedFont;
+    let validPosition = false;
+    let attempts = 0;
 
-    // --- POSITION LOGIC ---
-    // Pick a random spot between 0% and 100% of the screen
-    let randomX = Math.random() * 100;
-    let randomY = Math.random() * 100;
+    // It gets 50 tries to find a safe spot for the image
+    while (!validPosition && attempts < 50) {
+        let randX = Math.random() * 100;
+        let randY = Math.random() * 100;
 
-    // This loop checks: "Did it land in the middle 30% of the screen?"
-    // If yes, it rerolls the numbers until it lands somewhere else!
-    while (randomX > 35 && randomX < 65 && randomY > 35 && randomY < 65) {
-        randomX = Math.random() * 100;
-        randomY = Math.random() * 100;
+        // RULE 1: Do not center the image!
+        // If the anchor lands in the middle 40% of the screen, skip and reroll.
+        if (randX > 30 && randX < 70 && randY > 30 && randY < 70) {
+            attempts++;
+            continue;
+        }
+
+        // Apply the random coordinates to test them out
+        imgElement.style.left = randX + 'vw';
+        imgElement.style.top = randY + 'dvh';
+        imgElement.style.transform = `translate(-${randX}%, -${randY}%)`;
+
+        // Grab the mathematical box of where the image landed
+        const imgRect = imgElement.getBoundingClientRect();
+
+        // RULE 2: Do not touch the text!
+        // (We add a 20px padding bumper around the text just to be safe)
+        const isOverlappingText = !(
+            imgRect.right < textRect.left - 20 || 
+            imgRect.left > textRect.right + 20 || 
+            imgRect.bottom < textRect.top - 20 || 
+            imgRect.top > textRect.bottom + 20
+        );
+
+        // If it isn't touching the text, approve the placement!
+        if (!isOverlappingText) {
+            validPosition = true; 
+        }
+        
+        attempts++;
     }
 
-    // A Magic Developer Trick:
-    // By setting the Left position to X%, and then translating backward by X% of the image's OWN width,
-    // we guarantee the image never bleeds off the edge of the screen, no matter its size!
-    wrapperElement.style.left = randomX + 'vw';
-    wrapperElement.style.top = randomY + 'dvh';
-    wrapperElement.style.transform = `translate(-${randomX}%, -${randomY}%)`;
+    // Failsafe: If the image is incredibly massive and physically can't avoid the text,
+    // force it to sit in the top right corner out of the way.
+    if (!validPosition) {
+        imgElement.style.left = '95vw';
+        imgElement.style.top = '5dvh';
+        imgElement.style.transform = `translate(-95%, -5%)`;
+    }
 }
 
-// Mobile-responsive click listener
+// Instant Mobile Tapping
 window.addEventListener('pointerdown', showRandomImage);
