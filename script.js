@@ -1,6 +1,4 @@
 // --- JUST CHANGE THIS ONE SETTING ---
-// Put the highest number image you have here. 
-// It's okay if you guess a little high (e.g. putting 50 when you only have 42).
 const maxImageNumber = 90;  
 // ------------------------------------
 
@@ -9,7 +7,6 @@ const extensionsToTry = ['.jpg', '.png', '.JPG', '.PNG', '.jpeg', '.webp'];
 const allImages = [];
 let availableImages = [];
 
-// The 64 Fonts List
 const allFonts = [
     'Arial', '"Arial Black"', '"Arial Narrow"', 'Helvetica', 'sans-serif',
     '"Times New Roman"', 'Times', 'serif', 'Georgia', 'Palatino',
@@ -31,49 +28,41 @@ let availableFonts = [...allFonts];
 
 const imgElement = document.getElementById('displayImage');
 const textElement = document.getElementById('authorText');
+const wrapperElement = document.getElementById('imageWrapper'); // Grab the wrapper!
 
 let firstImageShown = false;
 
-// 1. THE DETECTIVE PRELOADER
-// This checks every number and guesses the extension until it finds your file
+// THE DETECTIVE PRELOADER
 for (let i = 1; i <= maxImageNumber; i++) {
     findAndPreloadImage(i, 0);
 }
 
 function findAndPreloadImage(imageNumber, extIndex) {
-    // If we tried every extension and none worked, stop checking this number
     if (extIndex >= extensionsToTry.length) return; 
 
     const testPath = 'images/' + imageNumber + extensionsToTry[extIndex];
     const tester = new Image();
     
-    // If it successfully finds the image:
     tester.onload = function() {
         allImages.push(testPath);
         availableImages.push(testPath);
         
-        // If this is the very first image it found, show it on screen immediately!
         if (!firstImageShown) {
             firstImageShown = true;
             showRandomImage();
         }
     };
     
-    // If it fails (e.g. 1.jpg doesn't exist):
     tester.onerror = function() {
-        // Try again with the next extension in the list (e.g. 1.png)
         findAndPreloadImage(imageNumber, extIndex + 1);
     };
     
-    // This line tells the detective to actually test the path
     tester.src = testPath; 
 }
 
 
-// 2. THE DISPLAY LOGIC
+// THE DISPLAY LOGIC
 function showRandomImage() {
-    
-    // If no images have finished loading yet, do nothing.
     if (allImages.length === 0) return;
     
     // --- IMAGE LOGIC ---
@@ -93,13 +82,26 @@ function showRandomImage() {
     const selectedFont = availableFonts.splice(randomFontIndex, 1)[0];
     
     textElement.style.fontFamily = selectedFont;
+
+    // --- POSITION LOGIC ---
+    // Pick a random spot between 0% and 100% of the screen
+    let randomX = Math.random() * 100;
+    let randomY = Math.random() * 100;
+
+    // This loop checks: "Did it land in the middle 30% of the screen?"
+    // If yes, it rerolls the numbers until it lands somewhere else!
+    while (randomX > 35 && randomX < 65 && randomY > 35 && randomY < 65) {
+        randomX = Math.random() * 100;
+        randomY = Math.random() * 100;
+    }
+
+    // A Magic Developer Trick:
+    // By setting the Left position to X%, and then translating backward by X% of the image's OWN width,
+    // we guarantee the image never bleeds off the edge of the screen, no matter its size!
+    wrapperElement.style.left = randomX + 'vw';
+    wrapperElement.style.top = randomY + 'dvh';
+    wrapperElement.style.transform = `translate(-${randomX}%, -${randomY}%)`;
 }
 
-// Make the screen clickable
-// CHANGE 'click' TO 'pointerdown'
+// Mobile-responsive click listener
 window.addEventListener('pointerdown', showRandomImage);
-
-// Run once right away when the page loads
-showRandomImage();
-
-
