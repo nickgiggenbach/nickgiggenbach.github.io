@@ -65,18 +65,13 @@ function findAndPreloadImage(imageNumber, extIndex) {
 
 
 // --- RESOLUTION PROTECTION ---
-// Shows the image once loaded, and enforces the 80% natural size rule
 imgElement.onload = function() {
-    // Calculate 80% of the image's true file resolution
     const shrinkWidth = imgElement.naturalWidth * 0.8;
     const shrinkHeight = imgElement.naturalHeight * 0.8;
 
-    // Set the new 80% max sizes, but keep the screen borders (85vw/80dvh) intact 
-    // so high-resolution images still shrink to fit the screen perfectly!
     imgElement.style.maxWidth = `min(${shrinkWidth}px, 85vw)`;
     imgElement.style.maxHeight = `min(${shrinkHeight}px, 80dvh)`;
     
-    // Reveal the image
     imgElement.style.opacity = '1';
 };
 
@@ -85,54 +80,99 @@ imgElement.onload = function() {
 function showRandomImage() {
     if (allImages.length === 0) return;
     
-    // Hide the image instantly while we swap it
     imgElement.style.opacity = '0';
     
     // Reset zoom when a new image loads
     currentZoom = 1;
     imgElement.style.transform = `scale(1)`;
     
-    // --- FONT LOGIC ---
     if (availableFonts.length === 0) {
         availableFonts = [...allFonts]; 
     }
     const randomFontIndex = Math.floor(Math.random() * availableFonts.length);
     textElement.style.fontFamily = availableFonts.splice(randomFontIndex, 1)[0];
 
-    // --- IMAGE LOGIC ---
     if (availableImages.length === 0) {
         availableImages = [...allImages]; 
     }
     const randomImageIndex = Math.floor(Math.random() * availableImages.length);
     
-    // Changing the source triggers the 'onload' function above to reveal it!
     imgElement.src = availableImages.splice(randomImageIndex, 1)[0];
 }
 
 
-// --- EVENT LISTENERS ---
+// --- EVENT LISTENERS & ZOOM ENGINE ---
 
-// 1. Instant Mobile Tapping & Mouse Clicking
-window.addEventListener('pointerdown', showRandomImage);
+let isZooming = false;
+let initialPinchDistance = null;
 
-// 2. Scroll Wheel Zoom Engine
+// 1. PINCH-TO-ZOOM (Mobile)
+window.addEventListener('touchstart', (e) => {
+    // If two fingers touch the screen, start the pinch!
+    if (e.touches.length === 2) {
+        isZooming = true;
+        // Calculate the distance between the two fingers
+        initialPinchDistance = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+    }
+});
+
+window.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && isZooming) {
+        e.preventDefault(); 
+        
+        // Calculate new distance as fingers move
+        const currentDistance = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+        );
+
+        // Find the difference and apply it to the zoom
+        const distanceDelta = currentDistance - initialPinchDistance;
+        currentZoom += distanceDelta * 0.01; // 0.01 is the sensitivity speed
+        
+        // Lock zoom limits (1x to 6x)
+        currentZoom = Math.min(Math.max(1, currentZoom), 6);
+        imgElement.style.transform = `scale(${currentZoom})`;
+        
+        // Reset base distance for continuous smooth zooming
+        initialPinchDistance = currentDistance;
+    }
+}, { passive: false });
+
+window.addEventListener('touchend', (e) => {
+    // If a finger lifts up, stop the pinch
+    if (e.touches.length < 2) {
+        // We set a tiny delay so the phone doesn't accidentally think 
+        // lifting your finger is a "click" to change the image
+        setTimeout(() => {
+            isZooming = false;
+        }, 100);
+    }
+});
+
+
+// 2. SCROLL WHEEL ZOOM (Desktop)
 window.addEventListener('wheel', function(event) {
-    // Stops the entire webpage from accidentally scrolling
     event.preventDefault(); 
 
-    // Scroll up = Zoom in. Scroll down = Zoom out.
     if (event.deltaY < 0) {
-        currentZoom += 0.15; // Speed of zooming in
+        currentZoom += 0.15; 
     } else {
-        currentZoom -= 0.15; // Speed of zooming out
+        currentZoom -= 0.15; 
     }
 
-    // Lock the zoom limits! 
-    // 1 = Cannot zoom out further than standard size
-    // 6 = Cannot zoom in more than 6x magnification
     currentZoom = Math.min(Math.max(1, currentZoom), 6);
-
-    // Apply the zoom size to the image
     imgElement.style.transform = `scale(${currentZoom})`;
-    
 }, { passive: false });
+
+
+// 3. CLICK / TAP TO CHANGE IMAGE
+window.addEventListener('pointerup', function(event) {
+    // Only change the image if they are NOT currently pinching/zooming
+    if (!isZooming) {
+        showRandomImage();
+    }
+});
