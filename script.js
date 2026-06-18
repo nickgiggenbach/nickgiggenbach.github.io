@@ -62,6 +62,16 @@ function findAndPreloadImage(imageNumber, extIndex) {
 
 // SHOW THE IMAGE ONCE IT IS LOADED (Prevents glitching)
 imgElement.onload = function() {
+    
+    // Calculate 80% of the image's true file resolution
+    const shrinkWidth = imgElement.naturalWidth * 0.8;
+    const shrinkHeight = imgElement.naturalHeight * 0.8;
+
+    // Set the new 80% max sizes, but keep the screen borders (85vw/80dvh) intact 
+    // so high-resolution images still shrink to fit the screen perfectly!
+    imgElement.style.maxWidth = `min(${shrinkWidth}px, 85vw)`;
+    imgElement.style.maxHeight = `min(${shrinkHeight}px, 80dvh)`;
+    
     imgElement.style.opacity = '1';
 };
 
