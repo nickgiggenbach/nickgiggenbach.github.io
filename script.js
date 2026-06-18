@@ -35,8 +35,6 @@ let panX = 0;
 let panY = 0;
 let firstImageShown = false;
 
-// Helper function to apply Zoom & Pan to the image
-// 'smooth' is true for desktop scroll wheel, false for mobile fingers (so it doesn't lag)
 function updateTransform(smooth = false) {
     if (smooth) {
         imgElement.style.transition = 'transform 0.15s ease-out, opacity 0s';
@@ -94,7 +92,6 @@ function showRandomImage() {
     
     imgElement.style.opacity = '0';
     
-    // Reset zoom and pan when a new image loads
     currentZoom = 1;
     panX = 0;
     panY = 0;
@@ -119,46 +116,45 @@ function showRandomImage() {
 
 let isZooming = false;
 let initialPinchDistance = null;
+let lastPinchCenterX = null;
+let lastPinchCenterY = null;
 
-// Panning variables
 let startX = 0;
 let startY = 0;
 let initialPanX = 0;
 let initialPanY = 0;
 let hasDragged = false;
-let ignoreNextClick = false;
 
-// 1. MOBILE TOUCH (Pinch to Zoom & 1-Finger Pan)
+// 1. MOBILE TOUCH (Tap, Pan, and Pinch)
 window.addEventListener('touchstart', (e) => {
     if (e.touches.length === 1) {
-        // Prepare for a potential 1-finger pan
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         initialPanX = panX;
         initialPanY = panY;
-        hasDragged = false;
+        hasDragged = false; // Reset drag status on new touch
         
     } else if (e.touches.length === 2) {
-        // Start 2-finger pinch
         isZooming = true;
-        hasDragged = true; // Pinching shouldn't trigger an image change
+        hasDragged = true; // Pinching counts as a drag so it doesn't trigger a tap
+        
         initialPinchDistance = Math.hypot(
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
         );
+        
+        lastPinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        lastPinchCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
     }
 });
 
 window.addEventListener('touchmove', (e) => {
-    // ONE FINGER PANNING
     if (e.touches.length === 1 && currentZoom > 1 && !isZooming) {
         e.preventDefault(); 
         
         const dx = e.touches[0].clientX - startX;
         const dy = e.touches[0].clientY - startY;
         
-        // You have to move your finger at least 5 pixels for it to count as a "drag" 
-        // (This prevents accidental microscopic finger shifts from canceling your click!)
         if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
             hasDragged = true;
         }
@@ -166,49 +162,75 @@ window.addEventListener('touchmove', (e) => {
         if (hasDragged) {
             panX = initialPanX + dx;
             panY = initialPanY + dy;
-            updateTransform(false); // false = instant tracking, no lag
+            updateTransform(false);
         }
         
-    // TWO FINGER ZOOMING
     } else if (e.touches.length === 2 && isZooming) {
         e.preventDefault(); 
+        
         const currentDistance = Math.hypot(
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
         );
 
+        const pinchCenterX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const pinchCenterY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+        panX += (pinchCenterX - lastPinchCenterX);
+        panY += (pinchCenterY - lastPinchCenterY);
+
         const distanceDelta = currentDistance - initialPinchDistance;
+        const oldZoom = currentZoom;
         currentZoom += distanceDelta * 0.01; 
         currentZoom = Math.min(Math.max(1, currentZoom), 6);
         
-        // Auto-center the image if you zoom all the way back out!
+        if (oldZoom !== currentZoom) {
+            const pointerX = pinchCenterX - window.innerWidth / 2;
+            const pointerY = pinchCenterY - window.innerHeight / 2;
+            
+            const imageX = (pointerX - panX) / oldZoom;
+            const imageY = (pointerY - panY) / oldZoom;
+            
+            panX = pointerX - imageX * currentZoom;
+            panY = pointerY - imageY * currentZoom;
+        }
+
         if (currentZoom === 1) {
             panX = 0;
             panY = 0;
         }
         
         updateTransform(false);
+        
         initialPinchDistance = currentDistance;
+        lastPinchCenterX = pinchCenterX;
+        lastPinchCenterY = pinchCenterY;
     }
 }, { passive: false });
 
 window.addEventListener('touchend', (e) => {
-    if (e.touches.length < 2) {
+    // We only care when the LAST finger leaves the screen
+    if (e.touches.length === 0) {
+        
+        // If they just tapped the screen quickly without dragging or zooming, change the image!
+        if (!hasDragged && !isZooming) {
+            showRandomImage();
+        }
+        
+        // Reset states for the next time they touch the screen
+        hasDragged = false;
         setTimeout(() => {
             isZooming = false;
         }, 100);
     }
-    
-    // If you lift all fingers off the screen, remember if it was a drag or a tap!
-    if (e.touches.length === 0) {
-        ignoreNextClick = hasDragged;
-    }
 });
 
 
-// 2. DESKTOP SCROLL WHEEL (Zooming)
+// 2. DESKTOP SCROLL WHEEL (Target Zooming)
 window.addEventListener('wheel', function(event) {
     event.preventDefault(); 
+
+    const oldZoom = currentZoom;
 
     if (event.deltaY < 0) {
         currentZoom += 0.15; 
@@ -218,22 +240,30 @@ window.addEventListener('wheel', function(event) {
 
     currentZoom = Math.min(Math.max(1, currentZoom), 6);
     
-    // Auto-center the image if you zoom all the way back out!
+    if (oldZoom !== currentZoom) {
+        const pointerX = event.clientX - window.innerWidth / 2;
+        const pointerY = event.clientY - window.innerHeight / 2;
+        
+        const imageX = (pointerX - panX) / oldZoom;
+        const imageY = (pointerY - panY) / oldZoom;
+        
+        panX = pointerX - imageX * currentZoom;
+        panY = pointerY - imageY * currentZoom;
+    }
+
     if (currentZoom === 1) {
         panX = 0;
         panY = 0;
     }
     
-    updateTransform(true); // true = smooth scrolling animation
+    updateTransform(true);
 }, { passive: false });
 
 
-// 3. CLICK / TAP TO CHANGE IMAGE
+// 3. DESKTOP MOUSE CLICK TO CHANGE IMAGE
 window.addEventListener('pointerup', function(event) {
-    // We only change the image if they didn't just pinch, and they didn't just drag!
-    if (!isZooming && !ignoreNextClick) {
+    // Only fire this on computers (mice). Mobile tapping is now fully handled in 'touchend' above!
+    if (event.pointerType === 'mouse') {
         showRandomImage();
     }
-    // Reset the click block for the next time you touch the screen
-    ignoreNextClick = false; 
 });
