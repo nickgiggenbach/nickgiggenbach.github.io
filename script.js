@@ -1,5 +1,5 @@
 // --- JUST CHANGE THIS ONE SETTING ---
-const maxImageNumber = 20;  // Change this to your highest numbered image
+const maxImageNumber = 90;  // Change this to your highest numbered image
 // ------------------------------------
 
 const extensionsToTry = ['.jpg', '.png', '.JPG', '.PNG', '.jpeg', '.webp'];
