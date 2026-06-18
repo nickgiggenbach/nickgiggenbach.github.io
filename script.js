@@ -29,11 +29,23 @@ let availableFonts = [...allFonts];
 const imgElement = document.getElementById('displayImage');
 const textElement = document.getElementById('authorText');
 
-// Setup for smooth zooming
+// Setup for Zoom & Pan State
 let currentZoom = 1;
-imgElement.style.transition = 'transform 0.15s ease-out, opacity 0s';
-
+let panX = 0;
+let panY = 0;
 let firstImageShown = false;
+
+// Helper function to apply Zoom & Pan to the image
+// 'smooth' is true for desktop scroll wheel, false for mobile fingers (so it doesn't lag)
+function updateTransform(smooth = false) {
+    if (smooth) {
+        imgElement.style.transition = 'transform 0.15s ease-out, opacity 0s';
+    } else {
+        imgElement.style.transition = 'opacity 0s';
+    }
+    imgElement.style.transform = `translate(${panX}px, ${panY}px) scale(${currentZoom})`;
+}
+
 
 // --- THE DETECTIVE PRELOADER ---
 for (let i = 1; i <= maxImageNumber; i++) {
@@ -82,9 +94,11 @@ function showRandomImage() {
     
     imgElement.style.opacity = '0';
     
-    // Reset zoom when a new image loads
+    // Reset zoom and pan when a new image loads
     currentZoom = 1;
-    imgElement.style.transform = `scale(1)`;
+    panX = 0;
+    panY = 0;
+    updateTransform(false);
     
     if (availableFonts.length === 0) {
         availableFonts = [...allFonts]; 
@@ -101,17 +115,33 @@ function showRandomImage() {
 }
 
 
-// --- EVENT LISTENERS & ZOOM ENGINE ---
+// --- EVENT LISTENERS: ZOOM & PAN ENGINE ---
 
 let isZooming = false;
 let initialPinchDistance = null;
 
-// 1. PINCH-TO-ZOOM (Mobile)
+// Panning variables
+let startX = 0;
+let startY = 0;
+let initialPanX = 0;
+let initialPanY = 0;
+let hasDragged = false;
+let ignoreNextClick = false;
+
+// 1. MOBILE TOUCH (Pinch to Zoom & 1-Finger Pan)
 window.addEventListener('touchstart', (e) => {
-    // If two fingers touch the screen, start the pinch!
-    if (e.touches.length === 2) {
+    if (e.touches.length === 1) {
+        // Prepare for a potential 1-finger pan
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        initialPanX = panX;
+        initialPanY = panY;
+        hasDragged = false;
+        
+    } else if (e.touches.length === 2) {
+        // Start 2-finger pinch
         isZooming = true;
-        // Calculate the distance between the two fingers
+        hasDragged = true; // Pinching shouldn't trigger an image change
         initialPinchDistance = Math.hypot(
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
@@ -120,41 +150,63 @@ window.addEventListener('touchstart', (e) => {
 });
 
 window.addEventListener('touchmove', (e) => {
-    if (e.touches.length === 2 && isZooming) {
+    // ONE FINGER PANNING
+    if (e.touches.length === 1 && currentZoom > 1 && !isZooming) {
         e.preventDefault(); 
         
-        // Calculate new distance as fingers move
+        const dx = e.touches[0].clientX - startX;
+        const dy = e.touches[0].clientY - startY;
+        
+        // You have to move your finger at least 5 pixels for it to count as a "drag" 
+        // (This prevents accidental microscopic finger shifts from canceling your click!)
+        if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+            hasDragged = true;
+        }
+        
+        if (hasDragged) {
+            panX = initialPanX + dx;
+            panY = initialPanY + dy;
+            updateTransform(false); // false = instant tracking, no lag
+        }
+        
+    // TWO FINGER ZOOMING
+    } else if (e.touches.length === 2 && isZooming) {
+        e.preventDefault(); 
         const currentDistance = Math.hypot(
             e.touches[0].clientX - e.touches[1].clientX,
             e.touches[0].clientY - e.touches[1].clientY
         );
 
-        // Find the difference and apply it to the zoom
         const distanceDelta = currentDistance - initialPinchDistance;
-        currentZoom += distanceDelta * 0.01; // 0.01 is the sensitivity speed
-        
-        // Lock zoom limits (1x to 6x)
+        currentZoom += distanceDelta * 0.01; 
         currentZoom = Math.min(Math.max(1, currentZoom), 6);
-        imgElement.style.transform = `scale(${currentZoom})`;
         
-        // Reset base distance for continuous smooth zooming
+        // Auto-center the image if you zoom all the way back out!
+        if (currentZoom === 1) {
+            panX = 0;
+            panY = 0;
+        }
+        
+        updateTransform(false);
         initialPinchDistance = currentDistance;
     }
 }, { passive: false });
 
 window.addEventListener('touchend', (e) => {
-    // If a finger lifts up, stop the pinch
     if (e.touches.length < 2) {
-        // We set a tiny delay so the phone doesn't accidentally think 
-        // lifting your finger is a "click" to change the image
         setTimeout(() => {
             isZooming = false;
         }, 100);
     }
+    
+    // If you lift all fingers off the screen, remember if it was a drag or a tap!
+    if (e.touches.length === 0) {
+        ignoreNextClick = hasDragged;
+    }
 });
 
 
-// 2. SCROLL WHEEL ZOOM (Desktop)
+// 2. DESKTOP SCROLL WHEEL (Zooming)
 window.addEventListener('wheel', function(event) {
     event.preventDefault(); 
 
@@ -165,14 +217,23 @@ window.addEventListener('wheel', function(event) {
     }
 
     currentZoom = Math.min(Math.max(1, currentZoom), 6);
-    imgElement.style.transform = `scale(${currentZoom})`;
+    
+    // Auto-center the image if you zoom all the way back out!
+    if (currentZoom === 1) {
+        panX = 0;
+        panY = 0;
+    }
+    
+    updateTransform(true); // true = smooth scrolling animation
 }, { passive: false });
 
 
 // 3. CLICK / TAP TO CHANGE IMAGE
 window.addEventListener('pointerup', function(event) {
-    // Only change the image if they are NOT currently pinching/zooming
-    if (!isZooming) {
+    // We only change the image if they didn't just pinch, and they didn't just drag!
+    if (!isZooming && !ignoreNextClick) {
         showRandomImage();
     }
+    // Reset the click block for the next time you touch the screen
+    ignoreNextClick = false; 
 });
