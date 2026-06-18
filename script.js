@@ -60,77 +60,8 @@ function findAndPreloadImage(imageNumber, extIndex) {
 }
 
 
-// --- THE NEW MATH-BASED COLLISION ENGINE ---
-// This runs the EXACT microsecond the new image is ready to show
+// SHOW THE IMAGE ONCE IT IS LOADED (Prevents glitching)
 imgElement.onload = function() {
-    
-    // Grab the exact dimensions of everything right now
-    const textRect = textElement.getBoundingClientRect();
-    const imgW = imgElement.getBoundingClientRect().width;
-    const imgH = imgElement.getBoundingClientRect().height;
-    const screenW = window.innerWidth;
-    const screenH = window.innerHeight;
-    
-    // The "Do Not Touch The Edge" Padding Buffer
-    const padding = 40; 
-    
-    // Calculate the absolute furthest the image can go before hitting the padding
-    let maxLeft = Math.max(padding, screenW - imgW - padding);
-    let maxTop = Math.max(padding, screenH - imgH - padding);
-    
-    let validPosition = false;
-    let attempts = 0;
-    
-    // Default safe spot just in case
-    let finalLeft = padding;
-    let finalTop = padding;
-
-    // Roll random coordinates behind the scenes
-    while (!validPosition && attempts < 100) {
-        
-        // Pick a random pixel coordinate within our safe borders
-        let rLeft = padding + (Math.random() * (maxLeft - padding));
-        let rTop = padding + (Math.random() * (maxTop - padding));
-        
-        // RULE 1: AVOID THE CENTER
-        let imgCenterX = rLeft + (imgW / 2);
-        let imgCenterY = rTop + (imgH / 2);
-        let isCentered = (
-            imgCenterX > screenW * 0.35 && imgCenterX < screenW * 0.65 &&
-            imgCenterY > screenH * 0.35 && imgCenterY < screenH * 0.65
-        );
-        
-        if (isCentered) {
-            attempts++;
-            continue;
-        }
-
-        // RULE 2: AVOID THE TEXT
-        let imgRight = rLeft + imgW;
-        let imgBottom = rTop + imgH;
-        
-        let isOverlappingText = !(
-            imgRight < textRect.left - 20 || 
-            rLeft > textRect.right + 20 || 
-            imgBottom < textRect.top - 20 || 
-            rTop > textRect.bottom + 20
-        );
-        
-        // If it passes both rules, save the coordinates!
-        if (!isOverlappingText) {
-            validPosition = true;
-            finalLeft = rLeft;
-            finalTop = rTop;
-        }
-        
-        attempts++;
-    }
-
-    // Apply the winning coordinates to the image ONLY ONCE
-    imgElement.style.left = finalLeft + 'px';
-    imgElement.style.top = finalTop + 'px';
-    
-    // The math is done, make the image visible!
     imgElement.style.opacity = '1';
 };
 
@@ -139,7 +70,7 @@ imgElement.onload = function() {
 function showRandomImage() {
     if (allImages.length === 0) return;
     
-    // Instantly hide the old image to prevent glitches while doing the math
+    // Hide the image instantly while we swap it
     imgElement.style.opacity = '0';
     
     // --- FONT LOGIC ---
@@ -155,7 +86,7 @@ function showRandomImage() {
     }
     const randomImageIndex = Math.floor(Math.random() * availableImages.length);
     
-    // Changing the src automatically triggers the 'onload' math function above!
+    // Changing the source triggers the 'onload' function above to reveal it!
     imgElement.src = availableImages.splice(randomImageIndex, 1)[0];
 }
 
