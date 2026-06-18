@@ -60,17 +60,88 @@ function findAndPreloadImage(imageNumber, extIndex) {
 }
 
 
+// --- THE NEW MATH-BASED COLLISION ENGINE ---
+// This runs the EXACT microsecond the new image is ready to show
+imgElement.onload = function() {
+    
+    // Grab the exact dimensions of everything right now
+    const textRect = textElement.getBoundingClientRect();
+    const imgW = imgElement.getBoundingClientRect().width;
+    const imgH = imgElement.getBoundingClientRect().height;
+    const screenW = window.innerWidth;
+    const screenH = window.innerHeight;
+    
+    // The "Do Not Touch The Edge" Padding Buffer
+    const padding = 40; 
+    
+    // Calculate the absolute furthest the image can go before hitting the padding
+    let maxLeft = Math.max(padding, screenW - imgW - padding);
+    let maxTop = Math.max(padding, screenH - imgH - padding);
+    
+    let validPosition = false;
+    let attempts = 0;
+    
+    // Default safe spot just in case
+    let finalLeft = padding;
+    let finalTop = padding;
+
+    // Roll random coordinates behind the scenes
+    while (!validPosition && attempts < 100) {
+        
+        // Pick a random pixel coordinate within our safe borders
+        let rLeft = padding + (Math.random() * (maxLeft - padding));
+        let rTop = padding + (Math.random() * (maxTop - padding));
+        
+        // RULE 1: AVOID THE CENTER
+        let imgCenterX = rLeft + (imgW / 2);
+        let imgCenterY = rTop + (imgH / 2);
+        let isCentered = (
+            imgCenterX > screenW * 0.35 && imgCenterX < screenW * 0.65 &&
+            imgCenterY > screenH * 0.35 && imgCenterY < screenH * 0.65
+        );
+        
+        if (isCentered) {
+            attempts++;
+            continue;
+        }
+
+        // RULE 2: AVOID THE TEXT
+        let imgRight = rLeft + imgW;
+        let imgBottom = rTop + imgH;
+        
+        let isOverlappingText = !(
+            imgRight < textRect.left - 20 || 
+            rLeft > textRect.right + 20 || 
+            imgBottom < textRect.top - 20 || 
+            rTop > textRect.bottom + 20
+        );
+        
+        // If it passes both rules, save the coordinates!
+        if (!isOverlappingText) {
+            validPosition = true;
+            finalLeft = rLeft;
+            finalTop = rTop;
+        }
+        
+        attempts++;
+    }
+
+    // Apply the winning coordinates to the image ONLY ONCE
+    imgElement.style.left = finalLeft + 'px';
+    imgElement.style.top = finalTop + 'px';
+    
+    // The math is done, make the image visible!
+    imgElement.style.opacity = '1';
+};
+
+
 // THE DISPLAY LOGIC
 function showRandomImage() {
     if (allImages.length === 0) return;
     
-    // --- IMAGE LOGIC ---
-    if (availableImages.length === 0) {
-        availableImages = [...allImages]; 
-    }
-    const randomImageIndex = Math.floor(Math.random() * availableImages.length);
-    imgElement.src = availableImages.splice(randomImageIndex, 1)[0];
-
+    // Instantly hide the old image to prevent glitches while doing the math
+    imgElement.style.opacity = '0';
+    
     // --- FONT LOGIC ---
     if (availableFonts.length === 0) {
         availableFonts = [...allFonts]; 
@@ -78,57 +149,14 @@ function showRandomImage() {
     const randomFontIndex = Math.floor(Math.random() * availableFonts.length);
     textElement.style.fontFamily = availableFonts.splice(randomFontIndex, 1)[0];
 
-    // --- COLLISION ENGINE & POSITIONING ---
-    // Grab the mathematical box of where the text is sitting right now
-    const textRect = textElement.getBoundingClientRect();
+    // --- IMAGE LOGIC ---
+    if (availableImages.length === 0) {
+        availableImages = [...allImages]; 
+    }
+    const randomImageIndex = Math.floor(Math.random() * availableImages.length);
     
-    let validPosition = false;
-    let attempts = 0;
-
-    // It gets 50 tries to find a safe spot for the image
-    while (!validPosition && attempts < 50) {
-        let randX = Math.random() * 100;
-        let randY = Math.random() * 100;
-
-        // RULE 1: Do not center the image!
-        // If the anchor lands in the middle 40% of the screen, skip and reroll.
-        if (randX > 30 && randX < 70 && randY > 30 && randY < 70) {
-            attempts++;
-            continue;
-        }
-
-        // Apply the random coordinates to test them out
-        imgElement.style.left = randX + 'vw';
-        imgElement.style.top = randY + 'dvh';
-        imgElement.style.transform = `translate(-${randX}%, -${randY}%)`;
-
-        // Grab the mathematical box of where the image landed
-        const imgRect = imgElement.getBoundingClientRect();
-
-        // RULE 2: Do not touch the text!
-        // (We add a 20px padding bumper around the text just to be safe)
-        const isOverlappingText = !(
-            imgRect.right < textRect.left - 20 || 
-            imgRect.left > textRect.right + 20 || 
-            imgRect.bottom < textRect.top - 20 || 
-            imgRect.top > textRect.bottom + 20
-        );
-
-        // If it isn't touching the text, approve the placement!
-        if (!isOverlappingText) {
-            validPosition = true; 
-        }
-        
-        attempts++;
-    }
-
-    // Failsafe: If the image is incredibly massive and physically can't avoid the text,
-    // force it to sit in the top right corner out of the way.
-    if (!validPosition) {
-        imgElement.style.left = '95vw';
-        imgElement.style.top = '5dvh';
-        imgElement.style.transform = `translate(-95%, -5%)`;
-    }
+    // Changing the src automatically triggers the 'onload' math function above!
+    imgElement.src = availableImages.splice(randomImageIndex, 1)[0];
 }
 
 // Instant Mobile Tapping
