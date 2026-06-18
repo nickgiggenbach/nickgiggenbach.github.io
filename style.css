@@ -6,37 +6,22 @@ body, html {
     width: 100vw;
     background-color: white;
     
-    /* Removed the flexbox centering rules entirely! */
     overflow: hidden;
     cursor: pointer;
     
     -webkit-tap-highlight-color: transparent; 
     touch-action: none; 
-    
-    /* Required to let the wrapper move around freely */
     position: relative; 
 }
 
-#imageWrapper {
-    /* This rips the image out of the normal layout so we can move it anywhere */
-    position: absolute; 
-    
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start; 
-    
-    /* Adds a little invisible padding so it never touches the exact edge of your screen */
-    padding: 20px;
-    box-sizing: border-box;
-}
-
 img {
-    /* RESOLUTION SCALING: width/height 'auto' means it shows at its exact real resolution. */
-    /* The max-width/height prevents massive images from bleeding off the screen. */
+    position: absolute; /* Frees the image to move anywhere */
+    
+    /* Displays at true resolution, but shrinks if it's bigger than the screen */
     width: auto;
     height: auto;
-    max-width: 80vw;
-    max-height: 75dvh; 
+    max-width: 85vw;
+    max-height: 80dvh; 
     
     user-select: none;
     -webkit-user-select: none;
@@ -44,10 +29,14 @@ img {
 }
 
 #authorText {
-    margin-top: 8px;
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    margin: 0;
     color: black;
     font-size: 18px; 
     pointer-events: none; 
     user-select: none; 
-    white-space: nowrap; /* Stops the text from breaking into two lines */
+    white-space: nowrap; 
+    z-index: 10; /* Guarantees the text stays as the top layer */
 }
