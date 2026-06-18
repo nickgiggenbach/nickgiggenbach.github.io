@@ -15,17 +15,20 @@ body, html {
 }
 
 img {
-    position: absolute; /* Frees the image to move anywhere */
+    position: absolute;
     
-    /* Displays at true resolution, but shrinks if it's bigger than the screen */
     width: auto;
     height: auto;
-    max-width: 85vw;
-    max-height: 80dvh; 
+    /* Forces the image to shrink enough to respect our new 40px borders */
+    max-width: calc(100vw - 80px);
+    max-height: calc(100dvh - 80px); 
     
     user-select: none;
     -webkit-user-select: none;
     -webkit-user-drag: none;
+    
+    /* Hides the image initially to prevent layout glitching */
+    opacity: 0; 
 }
 
 #authorText {
@@ -38,5 +41,5 @@ img {
     pointer-events: none; 
     user-select: none; 
     white-space: nowrap; 
-    z-index: 10; /* Guarantees the text stays as the top layer */
+    z-index: 10; 
 }
